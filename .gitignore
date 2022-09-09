@@ -1,0 +1,10 @@
+*.crt
+*.key
+
+cosign.*
+kubeconfig*
+
+*.jwt
+all_images.json
+dev_tags
+page_images.json

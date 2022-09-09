@@ -1,0 +1,212 @@
+---
+version: 2.1
+
+orbs:
+  op: twdps/onepassword@1.0.0
+  cosign: twdps/cosign@0.1.0
+  win: circleci/windows@4.1.1
+  kube: twdps/kube-ops@0.3.0
+  do: twdps/pipeline-events@dev:latest
+
+# =================================== global pipeline parameters
+
+parameters:
+  context:
+    description: circleci context for all jobs
+    type: string
+    default: twdps-core-labs-team
+  machine-image:
+    description: circleci machine to use for operator build jobs
+    type: string
+    default: ubuntu-2204:2022.07.1
+
+on-push-main: &on-push-main
+  branches:
+    only: /main/
+  tags:
+    ignore: /.*/
+
+on-tag-release: &on-tag-release
+  branches:
+    ignore: /.*/
+  tags:
+    only:
+      - /^([0-9]+(\.[0-9]+)+)-rc.[0-9]+$/
+      - /^((([0-9]+)\.([0-9]+)\.([0-9]+))?)$/
+
+executors:
+  go-builder:
+    docker:
+      - image: cimg/go:<< pipeline.parameters.go-version >>
+
+  linux-i386-agent:
+    docker:
+      - image: i386/buildpack-deps
+
+commands:
+
+  set-environment:
+    parameters:
+      registry: 
+        description: dtr compatible registry
+        type: string
+        default: docker.io
+      registry-login:
+        type: string
+        default: DOCKER_LOGIN
+      registry-password:
+        type: string
+        default: DOCKER_PASSWORD
+    steps:
+      - op/install-op:
+          os: Ubuntu
+      - op/env:
+          env-file: op.env
+      - run:
+          name: install go static analysis tools
+          command: |
+            go install honnef.co/go/tools/cmd/staticcheck@latest
+            curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $HOME/.go_workspace/bin v1.49.0
+      - do/validate-docker-credentials
+        
+  integration-tests:
+    steps: 
+      - run:
+          name: launch ci local cluster
+          command: kind create cluster --name test && sleep 10 # kind needs a bit of time to get a node available
+      - run:
+          name: deploy tls test app
+          command: bash scripts/deploy_test_app.sh && sleep 25 # app needs a bit of time to let the init container run and then startup the test app
+      - run:
+          name: test for successful certificate creation
+          command: bats test/certificate-init-container.bats
+
+jobs:
+
+  continuous-integration:
+    machine:
+      image: << pipeline.parameters.machine-image >>
+    shell: /bin/bash -eo pipefail
+    steps:
+      - checkout
+      - set-environment
+      - kube/packages:
+          use-sudo: true
+          kubectl-version: 1.24.4
+          kind-version: 0.14.0
+      - kube/packages:
+          use-sudo: false
+          bats-version: 1.7.0
+      - run:
+          name: static code analysis
+          command: |
+            staticcheck ./...
+      - run:
+          name: lint
+          command: |
+            golangci-lint run ./...
+      - run:
+          name: build and push ci image
+          command: |
+            make build
+            make push
+      - run:
+          name: test ci image
+          command: make build
+      # - integration-tests
+
+  release:
+    machine:
+      image: << pipeline.parameters.machine-image >>
+    shell: /bin/bash -eo pipefail
+    steps:
+      - checkout
+      - set-environment
+      - cosign/install
+      - run:
+          name: fetch keys for signing
+          command: |
+            echo "op://empc-lab/svc-cosign-private-key/notesPlain" > cosign.key.env
+            echo "op://empc-lab/svc-cosign-public-key/notesPlain" > cosign.pub.env
+            op inject -i cosign.key.env -o cosign.key
+            op inject -i cosign.pub.env -o cosign.pub
+      - run:
+          name: Use goreleaser to build and publish executables
+          command: |
+            curl -sL https://git.io/goreleaser | bash
+      # - run:
+      #     name: validate signature
+      #     command: cosign verify-blob -key cosign.pub -signature release-assets/dpsctl_Linux_i386.tar.gz.sig release-assets/dpsctl_Linux_i386.tar.gz
+      # - persist_to_workspace:
+      #     root: ~/
+      #     paths:
+      #       - project/release-assets
+      # - run:
+      #     name: prune image registry of dev tags
+      #     command: bash scripts/prune_registry.sh
+
+  # smoke-test-linux:
+  #   executor: linux-i386-agent
+  #   steps:
+  #     - checkout
+  #     - attach_workspace:
+  #         at: ~/
+  #     - run:
+  #         name: smoketest i386 linux version
+  #         command: |
+  #           tar -xvzf release-assets/dpsctl_Linux_i386.tar.gz
+  #           ./dpsctl version | grep ${CIRCLE_TAG}
+  # smoke-test-macos:
+  #   macos:
+  #     xcode: 14.0.0
+  #   steps:
+  #     - checkout
+  #     - attach_workspace:
+  #         at: ~/
+  #     - run:
+  #         name: smoketest MacOS linux version
+  #         command: |
+  #           tar -xvzf release-assets/dpsctl_macOS_x86_64.tar.gz
+  #           ./dpsctl version | grep ${CIRCLE_TAG}
+  # smoke-test-win:
+  #   executor:
+  #     name: win/default
+  #     shell: bash.exe
+  #   steps:
+  #     - checkout
+  #     - attach_workspace:
+  #           at: ~/
+  #     - run:
+  #         name: smoke test windows version
+  #         command: |
+  #           unzip -u release-assets/dpsctl_Windows_x86_64.zip
+  #           ./dpsctl version | grep ${CIRCLE_TAG}
+workflows:
+  version: 2
+
+  dev-build:
+    jobs:
+      - continuous-integration:
+          name: run static code analysis and integration tests
+          context: << pipeline.parameters.context >>
+          filters: *on-push-main
+
+  release:
+    jobs:
+      - release:
+          name: publish release version
+          context: << pipeline.parameters.context >>
+          filters: *on-tag-release
+
+  #     - smoke-test-linux:
+  #         requires:
+  #           - publish (pre)release
+  #         filters: *on-tag-release
+  #     - smoke-test-macos:
+  #         requires:
+  #           - publish (pre)release
+  #         filters: *on-tag-release
+  #     - smoke-test-win:
+  #         requires:
+  #           - publish (pre)release
+  #         filters: *on-tag-release
