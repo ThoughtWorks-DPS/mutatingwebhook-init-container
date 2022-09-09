@@ -7,6 +7,40 @@ metadata:
   name: ci-dev
 
 ---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: tls-test-app
+  namespace: ci-dev
+  labels:
+    app: tls-test-app
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  # "namespace" omitted since ClusterRoles are not namespaced
+  name: tls-test-app-role
+rules:
+- apiGroups: ["*"]
+  resources: ["*"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: tls-test-app-role-binding
+subjects:
+- kind: ServiceAccount
+  name: tls-test-app
+  namespace: ci-dev
+roleRef:
+  kind: ClusterRole
+  name:  tls-test-app-role
+  apiGroup: rbac.authorization.k8s.io
+
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -68,7 +102,7 @@ spec:
             - "--namespace-selector-key=opa-istio-injection"
             - "--namespace-selector-value=enabled"
             - "--cert-dir=/etc/tls"
-            
+
           volumeMounts:
             - name: tls
               mountPath: /etc/tls
