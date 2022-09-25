@@ -129,5 +129,3 @@ spec:
 EOF
 
 kubectl apply -f deployment.yaml
-
-kubectl exec -it $(kubectl get pod -l app=tls-test-app -n ci-dev -o jsonpath="{.items[0].metadata.name}") -n ci-dev -- cat /etc/tls/tls.crt
