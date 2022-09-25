@@ -122,10 +122,12 @@ func main() {
 		if _, err := kubeClient.AdmissionregistrationV1().MutatingWebhookConfigurations().Update(context.Background(), mutateconfig, metav1.UpdateOptions{}); err != nil {
 			log.Fatalf("failed to update mutatingwebhook with err %s", err)
 		}
+		log.Print("Success: updated mutatingwebhookconfiguration")
 	} else {
 		if _, err := kubeClient.AdmissionregistrationV1().MutatingWebhookConfigurations().Create(context.Background(), mutateconfig, metav1.CreateOptions{}); err != nil {
 			log.Fatalf("failed to create mutatingwebhook with err %s", err)
 		}
+		log.Print("Success: created mutatingwebhookconfiguration")
 	}
 }
 

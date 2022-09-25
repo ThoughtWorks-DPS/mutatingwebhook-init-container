@@ -34,14 +34,14 @@ on-tag-release: &on-tag-release
       - /^([0-9]+(\.[0-9]+)+)-rc.[0-9]+$/
       - /^((([0-9]+)\.([0-9]+)\.([0-9]+))?)$/
 
-executors:
-  go-builder:
-    docker:
-      - image: cimg/go:<< pipeline.parameters.go-version >>
+# executors:
+#   go-builder:
+#     docker:
+#       - image: cimg/go:<< pipeline.parameters.go-version >>
 
-  linux-i386-agent:
-    docker:
-      - image: i386/buildpack-deps
+#   linux-i386-agent:
+#     docker:
+#       - image: i386/buildpack-deps
 
 commands:
 
@@ -113,7 +113,7 @@ jobs:
       - run:
           name: test ci image
           command: make build
-      # - integration-tests
+      - integration-tests
 
   release:
     machine:
