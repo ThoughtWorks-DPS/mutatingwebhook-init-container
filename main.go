@@ -10,7 +10,7 @@ import (
 	// "fmt"
 
 	"log"
-
+	// "encoding/json"
 	// "strings"
 	// "path"
 	// "math/big"
@@ -75,8 +75,10 @@ func main() {
 	}
 
 	// create mutatingwebhookconfiguration resource request
+
 	fail := admissionregistrationv1.Fail
 	none := admissionregistrationv1.SideEffectClassNone
+
 	mutateconfig := &admissionregistrationv1.MutatingWebhookConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: objectMetaName,
@@ -110,16 +112,32 @@ func main() {
 		}},
 	}
 
-	listM, err := kubeClient.AdmissionregistrationV1().MutatingWebhookConfigurations().List(context.Background(), metav1.ListOptions{})
+	mutatingWebhookList, err := kubeClient.AdmissionregistrationV1().MutatingWebhookConfigurations().List(context.Background(), metav1.ListOptions{})
 	if err != nil {
-		log.Fatalf("err listing mutating configs - %v", err)
+		log.Fatalf("fail to list mutatingwebhooks with err %s", err)
 	}
+	mutateconfig.ObjectMeta.ResourceVersion = webhookExists(mutatingWebhookList, objectMetaName)
 
-	log.Printf("%s", listM)
+	if mutateconfig.ObjectMeta.ResourceVersion != "" {
+		if _, err := kubeClient.AdmissionregistrationV1().MutatingWebhookConfigurations().Update(context.Background(), mutateconfig, metav1.UpdateOptions{}); err != nil {
+			log.Fatalf("failed to update mutatingwebhook with err %s", err)
+		}
+	} else {
+		if _, err := kubeClient.AdmissionregistrationV1().MutatingWebhookConfigurations().Create(context.Background(), mutateconfig, metav1.CreateOptions{}); err != nil {
+			log.Fatalf("failed to create mutatingwebhook with err %s", err)
+		}
+	}
+}
 
-	// if _, err := kubeClient.AdmissionregistrationV1().MutatingWebhookConfigurations().Create(context.Background(), mutateconfig, metav1.CreateOptions{}); err != nil {
-	// 	panic(err)
-	// }
-	// TODO - Remove when rdy to create
-	log.Printf("%s", mutateconfig)
+func webhookExists(webhookList *admissionregistrationv1.MutatingWebhookConfigurationList, objectMetaName string) string {
+	log.Print("checking if mutatingwebhookconfiguration already exists")
+	for i := range webhookList.Items {
+		log.Print("%s", webhookList.Items[i].Webhooks[0].Name)
+		if webhookList.Items[i].ObjectMeta.Name == objectMetaName {
+			log.Print("found, update with ResourceVersion")
+			return webhookList.Items[i].ObjectMeta.ResourceVersion
+		}
+	}
+	log.Print("not found, create new mutatingwebhookconfiguration")
+	return ""
 }

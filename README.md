@@ -13,3 +13,5 @@ Init container for managing the deployment of the MutatingWebhookConfiguration f
 
 ## Usage
 
+
+-webhook-name=istio.openpolicyagent.org -object-meta-name=opa-istio-admission-controller -service-name=admission-controller-service-namespace=opa-system -service-path="/v0/data/istio/inject" -namespace-selector-key=opa-injection -namespace-selector-value=enabled -cert-path='./'
