@@ -79,7 +79,7 @@ commands:
           command: bash scripts/deploy_test_app.sh && sleep 25 # app needs a bit of time to let the init container run and then startup the test app
       - run:
           name: test for successful certificate creation
-          command: bats test/certificate-init-container.bats
+          command: bats test/sidecar-mutatingwebhook-init-container.bats
 
 jobs:
 
