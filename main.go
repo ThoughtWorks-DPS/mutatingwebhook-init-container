@@ -132,7 +132,7 @@ func main() {
 func webhookExists(webhookList *admissionregistrationv1.MutatingWebhookConfigurationList, objectMetaName string) string {
 	log.Print("checking if mutatingwebhookconfiguration already exists")
 	for i := range webhookList.Items {
-		log.Print("%s", webhookList.Items[i].Webhooks[0].Name)
+		log.Printf("%s", webhookList.Items[i].Webhooks[0].Name)
 		if webhookList.Items[i].ObjectMeta.Name == objectMetaName {
 			log.Print("found, update with ResourceVersion")
 			return webhookList.Items[i].ObjectMeta.ResourceVersion
