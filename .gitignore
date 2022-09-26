@@ -8,3 +8,5 @@ kubeconfig*
 all_images.json
 dev_tags
 page_images.json
+
+deploy.yml

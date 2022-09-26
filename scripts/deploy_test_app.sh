@@ -98,10 +98,9 @@ spec:
             - "--service-name=opa-injector-admission-controller"
             - "--service-namespace=\$(NAMESPACE)"
             - "--service-path=/v0/data/istio/inject"
-            - "--cert-path=./tls.crt"
             - "--namespace-selector-key=opa-istio-injection"
             - "--namespace-selector-value=enabled"
-            - "--cert-dir=/etc/tls"
+            - "--cert-path=/etc/tls/tls.crt"
 
           volumeMounts:
             - name: tls
