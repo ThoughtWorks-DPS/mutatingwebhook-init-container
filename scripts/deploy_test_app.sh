@@ -58,6 +58,7 @@ spec:
       labels:
         app: tls-test-app
     spec:
+      serviceAccountName: tls-test-app
       initContainers:
         - name: certificate-init-container
           image: twdps/certificate-init-container:0.1.0
