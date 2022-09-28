@@ -5,7 +5,7 @@
 		<img alt="DPS Title" src="https://raw.githubusercontent.com/ThoughtWorks-DPS/static/master/EMPCPlatformStarterKitsImage.png?sanitize=true" width=350/>
 	</p>
   <h3>sidecar-mutatingwebhook-init-container</h3>
-    <a href="https://app.circleci.com/pipelines/github/ThoughtWorks-DPS/certificate-init-container"><img src="https://circleci.com/gh/ThoughtWorks-DPS/certificate-init-container.svg?style=shield"></a> <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
+    <a href="https://app.circleci.com/pipelines/github/ThoughtWorks-DPS/sidecar-mutatingwebhook-init-container"><img src="https://circleci.com/gh/ThoughtWorks-DPS/sidecar-mutatingwebhook-init-container.svg?style=shield"></a> <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
 </div>
 <br />
 
@@ -13,5 +13,3 @@ Init container for managing the deployment of the MutatingWebhookConfiguration f
 
 ## Usage
 
-
--webhook-name=istio.openpolicyagent.org -object-meta-name=opa-istio-admission-controller -service-name=admission-controller-service-namespace=opa-system -service-path="/v0/data/istio/inject" -namespace-selector-key=opa-injection -namespace-selector-value=enabled -cert-path='./'

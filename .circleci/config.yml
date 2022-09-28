@@ -6,19 +6,45 @@ orbs:
   cosign: twdps/cosign@0.1.0
   win: circleci/windows@4.1.1
   kube: twdps/kube-ops@0.3.0
-  do: twdps/pipeline-events@dev:latest
+  do: twdps/pipeline-events@0.2.0
 
 # =================================== global pipeline parameters
 
 parameters:
+
   context:
     description: circleci context for all jobs
     type: string
     default: twdps-core-labs-team
-  machine-image:
-    description: circleci machine to use for operator build jobs
+  linux-amd-image:
+    description: circleci machine to use for operator build and amd testing
     type: string
     default: ubuntu-2204:2022.07.1
+  linux-arm-image:
+    description: circleci machine to use for arm testing
+    type: string
+    default: ubuntu-2004:2022.04.1
+
+  kubectl-version:
+    type: string
+    default: "1.24.4"
+  kind-version:
+    type: string
+    default: "0.14.0"
+  bats-version:
+    type: string
+    default: "1.7.0"
+  staticcheck-version:
+    type: string
+    default: "2022.1.3"
+  golangci-lint-version:
+    type: string
+    default: "1.49.0"
+  govulncheck-version:
+    type: string
+    default: "latest"
+
+# =================================== triggers
 
 on-push-main: &on-push-main
   branches:
@@ -34,14 +60,7 @@ on-tag-release: &on-tag-release
       - /^([0-9]+(\.[0-9]+)+)-rc.[0-9]+$/
       - /^((([0-9]+)\.([0-9]+)\.([0-9]+))?)$/
 
-# executors:
-#   go-builder:
-#     docker:
-#       - image: cimg/go:<< pipeline.parameters.go-version >>
-
-#   linux-i386-agent:
-#     docker:
-#       - image: i386/buildpack-deps
+# =================================== commands and jobs
 
 commands:
 
@@ -62,11 +81,6 @@ commands:
           os: Ubuntu
       - op/env:
           env-file: op.env
-      - run:
-          name: install go static analysis tools
-          command: |
-            go install honnef.co/go/tools/cmd/staticcheck@latest
-            curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $HOME/.go_workspace/bin v1.49.0
       - do/validate-docker-credentials
         
   integration-tests:
@@ -81,22 +95,44 @@ commands:
           name: test for successful certificate creation
           command: bats test/sidecar-mutatingwebhook-init-container.bats
 
+  docker-run-test:
+    steps:
+      - run:
+          name: smoketest image build
+          command: |
+            docker pull twdps/sidecar-mutatingwebhook-init-container
+            docker run -it twdps/sidecar-mutatingwebhook-init-container:latest | grep "MutatingWebhookConfiguration deployed with the following information"
+
 jobs:
 
   continuous-integration:
     machine:
-      image: << pipeline.parameters.machine-image >>
+      image: << pipeline.parameters.linux-amd-image >>
     shell: /bin/bash -eo pipefail
     steps:
       - checkout
       - set-environment
       - kube/packages:
           use-sudo: true
-          kubectl-version: 1.24.4
-          kind-version: 0.14.0
+          kubectl-version: << pipeline.parameters.kubectl-version >>
+          kind-version: << pipeline.parameters.kind-version >>
       - kube/packages:
           use-sudo: false
-          bats-version: 1.7.0
+          bats-version: << pipeline.parameters.bats-version >>
+      - run:
+          name: install go static analysis tools
+          command: |
+            echo 'install staticcheck'
+            go install honnef.co/go/tools/cmd/staticcheck@<< pipeline.parameters.staticcheck-version >>
+            staticcheck -version
+
+            echo 'install golangci-lint'
+            curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $HOME/.go_workspace/bin v<< pipeline.parameters.golangci-lint-version >>
+            golangci-lint --version
+
+            echo 'install govulncheck'
+            go install golang.org/x/vuln/cmd/govulncheck@<< pipeline.parameters.govulncheck-version >>
+            govulncheck --help
       - run:
           name: static code analysis
           command: |
@@ -106,23 +142,24 @@ jobs:
           command: |
             golangci-lint run ./...
       - run:
-          name: build and push ci image
-          command: |
-            make build
-            make push
+          name: golang specific vulnerability assessment
+          command: govulncheck ./...
       - run:
-          name: test ci image
+          name: build dev image
           command: make build
+      - run:
+          name: push dev build to registry
+          command: make push
       - integration-tests
 
   release:
     machine:
-      image: << pipeline.parameters.machine-image >>
+      image: << pipeline.parameters.linux-amd-image >>
     shell: /bin/bash -eo pipefail
     steps:
       - checkout
-      - set-environment
       - cosign/install
+      - set-environment
       - run:
           name: fetch keys for signing
           command: |
@@ -134,53 +171,30 @@ jobs:
           name: Use goreleaser to build and publish executables
           command: |
             curl -sL https://git.io/goreleaser | bash
-      # - run:
-      #     name: validate signature
-      #     command: cosign verify-blob -key cosign.pub -signature release-assets/dpsctl_Linux_i386.tar.gz.sig release-assets/dpsctl_Linux_i386.tar.gz
-      # - persist_to_workspace:
-      #     root: ~/
-      #     paths:
-      #       - project/release-assets
-      # - run:
-      #     name: prune image registry of dev tags
-      #     command: bash scripts/prune_registry.sh
+      - run: 
+          name: validate signature
+          command: cosign verify -key cosign.pub twdps/sidecar-mutatingwebhook-init-container
+      - do/prune-dockerhub:
+          repository: twdps/sidecar-mutatingwebhook-init-container
+          tag-filter: dev
 
-  # smoke-test-linux:
-  #   executor: linux-i386-agent
-  #   steps:
-  #     - checkout
-  #     - attach_workspace:
-  #         at: ~/
-  #     - run:
-  #         name: smoketest i386 linux version
-  #         command: |
-  #           tar -xvzf release-assets/dpsctl_Linux_i386.tar.gz
-  #           ./dpsctl version | grep ${CIRCLE_TAG}
-  # smoke-test-macos:
-  #   macos:
-  #     xcode: 14.0.0
-  #   steps:
-  #     - checkout
-  #     - attach_workspace:
-  #         at: ~/
-  #     - run:
-  #         name: smoketest MacOS linux version
-  #         command: |
-  #           tar -xvzf release-assets/dpsctl_macOS_x86_64.tar.gz
-  #           ./dpsctl version | grep ${CIRCLE_TAG}
-  # smoke-test-win:
-  #   executor:
-  #     name: win/default
-  #     shell: bash.exe
-  #   steps:
-  #     - checkout
-  #     - attach_workspace:
-  #           at: ~/
-  #     - run:
-  #         name: smoke test windows version
-  #         command: |
-  #           unzip -u release-assets/dpsctl_Windows_x86_64.zip
-  #           ./dpsctl version | grep ${CIRCLE_TAG}
+  smoke-test-linux-amd64:
+    machine:
+      image: << pipeline.parameters.linux-amd-image >>
+    steps:
+      - checkout
+      - docker-run-test
+
+  smoke-test-linux-arm64:
+    machine:
+      image: << pipeline.parameters.linux-arm-image >>
+    resource_class: arm.medium
+    steps:
+      - checkout
+      - docker-run-test
+
+# =================================== workflows
+
 workflows:
   version: 2
 
@@ -198,15 +212,14 @@ workflows:
           context: << pipeline.parameters.context >>
           filters: *on-tag-release
 
-  #     - smoke-test-linux:
-  #         requires:
-  #           - publish (pre)release
-  #         filters: *on-tag-release
-  #     - smoke-test-macos:
-  #         requires:
-  #           - publish (pre)release
-  #         filters: *on-tag-release
-  #     - smoke-test-win:
-  #         requires:
-  #           - publish (pre)release
-  #         filters: *on-tag-release
+      - smoke-test-linux-amd64:
+          name: smoke test amd64 version
+          requires:
+            - publish release version
+          filters: *on-tag-release
+
+      - smoke-test-linux-arm64:
+          name: smoke test arm64 version
+          requires:
+            - publish release version
+          filters: *on-tag-release
