@@ -48,12 +48,12 @@ dockers:
 docker_manifests:
   - name_template: docker.io/twdps/{{ .ProjectName }}:{{ .Version }}
     image_templates:
-    - docker.io/twdps/{{ .ProjectName }}:{{ .Version }}-amd64
-    - docker.io/twdps/{{ .ProjectName }}:{{ .Version }}-arm64
+    - docker.io/twdps/{{ .ProjectName }}:{{ .Version }}-linux-amd64
+    - docker.io/twdps/{{ .ProjectName }}:{{ .Version }}-linux-arm64
   - name_template: docker.io/twdps/{{ .ProjectName }}:latest
     image_templates:
-    - docker.io/twdps/{{ .ProjectName }}:latest-amd64
-    - docker.io/twdps/{{ .ProjectName }}:latest-arm64
+    - docker.io/twdps/{{ .ProjectName }}:latest-linux-amd64
+    - docker.io/twdps/{{ .ProjectName }}:latest-linux-arm64
 
 signs:
   - cmd: cosign
