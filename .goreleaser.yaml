@@ -55,8 +55,9 @@ docker_manifests:
     - docker.io/twdps/{{ .ProjectName }}:latest-linux-amd64
     - docker.io/twdps/{{ .ProjectName }}:latest-linux-arm64
 
-signs:
+docker_signs:
   - cmd: cosign
     stdin: '{{ .Env.COSIGN_PWD }}'
-    args: ["sign-blob", "--key=cosign.key", "--output=${signature}", "${artifact}"]
+    args: ["sign", "--key=cosign.key", "${artifact}"]
     artifacts: all
+
