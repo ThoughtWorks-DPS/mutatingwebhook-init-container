@@ -194,3 +194,4 @@ workflows:
               architecture: [ amd64, arm64 ]
           requires:
             - publish release version
+          filters: *on-tag-release

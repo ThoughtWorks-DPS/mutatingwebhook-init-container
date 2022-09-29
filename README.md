@@ -9,7 +9,9 @@
 </div>
 <br />
 
-Init container for managing the deployment of the MutatingWebhookConfiguration for namespace-oriented sidecar injection admission controllers  
+Init container for managing the deployment of a MutatingWebhookConfiguration to trigger an admission-contoller based on deployments to a namespace based on matching namespace annotation.  
 
 ## Usage
+
+This init container is optimized to work in conjuction with a certificate init container, however it can be used independently so long as the required certificate is available on a (configurable) mount path location.  
 
