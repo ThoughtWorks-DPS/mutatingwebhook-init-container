@@ -10,20 +10,22 @@ orbs:
 
 # =================================== global pipeline parameters
 
+executors:
+
+  amd64:
+    machine:
+      image: ubuntu-2204:2022.07.1
+  arm64:
+    machine:
+      image: ubuntu-2004:2022.04.1
+    resource_class: arm.medium
+
 parameters:
 
   context:
     description: circleci context for all jobs
     type: string
     default: twdps-core-labs-team
-  linux-amd-image:
-    description: circleci machine to use for operator build and amd testing
-    type: string
-    default: ubuntu-2204:2022.07.1
-  linux-arm-image:
-    description: circleci machine to use for arm testing
-    type: string
-    default: ubuntu-2004:2022.04.1
 
   kubectl-version:
     type: string
@@ -65,17 +67,6 @@ on-tag-release: &on-tag-release
 commands:
 
   set-environment:
-    parameters:
-      registry: 
-        description: dtr compatible registry
-        type: string
-        default: docker.io
-      registry-login:
-        type: string
-        default: DOCKER_LOGIN
-      registry-password:
-        type: string
-        default: DOCKER_PASSWORD
     steps:
       - op/install-op:
           os: Ubuntu
@@ -95,20 +86,10 @@ commands:
           name: test for successful certificate creation
           command: bats test/sidecar-mutatingwebhook-init-container.bats
 
-  docker-run-test:
-    steps:
-      - run:
-          name: smoketest image build
-          command: |
-            docker pull twdps/sidecar-mutatingwebhook-init-container
-            docker run -it twdps/sidecar-mutatingwebhook-init-container:latest | grep "MutatingWebhookConfiguration deployed with the following information"
-
 jobs:
 
   continuous-integration:
-    machine:
-      image: << pipeline.parameters.linux-amd-image >>
-    shell: /bin/bash -eo pipefail
+    executor: amd64
     steps:
       - checkout
       - set-environment
@@ -153,9 +134,7 @@ jobs:
       - integration-tests
 
   release:
-    machine:
-      image: << pipeline.parameters.linux-amd-image >>
-    shell: /bin/bash -eo pipefail
+    executor: amd64
     steps:
       - checkout
       - cosign/install
@@ -178,20 +157,16 @@ jobs:
           repository: twdps/sidecar-mutatingwebhook-init-container
           tag-filter: dev
 
-  smoke-test-linux-amd64:
-    machine:
-      image: << pipeline.parameters.linux-amd-image >>
+  smoke-test-containers:
+    parameters:
+      architecture:
+        type: executor
+    executor: << parameters.architecture >>
     steps:
       - checkout
-      - docker-run-test
-
-  smoke-test-linux-arm64:
-    machine:
-      image: << pipeline.parameters.linux-arm-image >>
-    resource_class: arm.medium
-    steps:
-      - checkout
-      - docker-run-test
+      - run:
+          name: run image and review logs 
+          command: bash scripts/review_log_output.sh
 
 # =================================== workflows
 
@@ -212,14 +187,10 @@ workflows:
           context: << pipeline.parameters.context >>
           filters: *on-tag-release
 
-      - smoke-test-linux-amd64:
-          name: smoke test amd64 version
+      - smoke-test-containers:
+          name: smoke test containers by architecture
+          matrix:
+            parameters:
+              architecture: [ amd64, arm64 ]
           requires:
             - publish release version
-          filters: *on-tag-release
-
-      - smoke-test-linux-arm64:
-          name: smoke test arm64 version
-          requires:
-            - publish release version
-          filters: *on-tag-release
