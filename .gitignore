@@ -10,3 +10,5 @@ dev_tags
 page_images.json
 
 deploy.yml
+!sample.crt
+!sample.key
