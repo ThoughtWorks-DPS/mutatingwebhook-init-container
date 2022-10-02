@@ -85,8 +85,8 @@ spec:
             - name: tls
               mountPath: /etc/tls
 
-        - name: sidecar-mutatingwebhook-init-container
-          image: twdps/sidecar-mutatingwebhook-init-container:dev.${CIRCLE_SHA1:0:8}
+        - name: mutatingwebhook-init-container
+          image: twdps/mutatingwebhook-init-container:dev.${CIRCLE_SHA1:0:8}
           imagePullPolicy: Always
           env:
             - name: NAMESPACE

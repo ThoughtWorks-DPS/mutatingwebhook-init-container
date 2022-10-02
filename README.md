@@ -4,18 +4,18 @@
     <br />
 		<img alt="DPS Title" src="https://raw.githubusercontent.com/ThoughtWorks-DPS/static/master/EMPCPlatformStarterKitsImage.png?sanitize=true" width=350/>
 	</p>
-  <h3>sidecar-mutatingwebhook-init-container</h3>
-    <a href="https://app.circleci.com/pipelines/github/ThoughtWorks-DPS/sidecar-mutatingwebhook-init-container"><img src="https://circleci.com/gh/ThoughtWorks-DPS/sidecar-mutatingwebhook-init-container.svg?style=shield"></a> <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
+  <h3>mutatingwebhook-init-container</h3>
+    <a href="https://app.circleci.com/pipelines/github/ThoughtWorks-DPS/mutatingwebhook-init-container"><img src="https://circleci.com/gh/ThoughtWorks-DPS/mutatingwebhook-init-container.svg?style=shield"></a> <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
 </div>
 <br />
 
 Init container for managing the deployment of a MutatingWebhookConfiguration to trigger an admission-contoller based on deployments to a namespace based on matching namespace annotation.  
 
-## Usage
+## Usagemkk
 
 Kubernetes admission controllers depend on a webhook configuration as the triggering event. Two types of webhooks are  supported, validating webhooks and mutating webhooks. Where the expected outcome from an admission controller is to modify a deployment, a mutating webhook is configured with the desired trigger parameters.  
 
-This sidecar-mutatingwebhook-init-container defines a mutating webhook configured to watch for any pod creation events in any namespace that is annotated with a specified key and value. As a result, prior to performing the deployment the kubernetes api will call your custom api sending the contents of the deployment request. It is assumed your 'admission controller' service will modify the deployment in some way.  
+This mutatingwebhook-init-container defines a mutating webhook configured to watch for any pod creation events in any namespace that is annotated with a specified key and value. As a result, prior to performing the deployment the kubernetes api will call your custom api sending the contents of the deployment request. It is assumed your 'admission controller' service will modify the deployment in some way.  
 
 The communication between the kubernetes api and your custom service must be encrtyped via mTls. When you deploy your service you must configure it with the necessary public certificate and private key. This same certificate must be included in the mutating webhook configuration so that the kubernetes api may present it to your service to establish mutual tls encryption.
 
@@ -29,12 +29,12 @@ This init container is optimized to work in conjuction with a [certificate init 
 
 The certificate-init-container follows a well known pattern of generating a CA certificate and then using this CA to sign the certificate made available to the pod. This is done in proc before the resulting certificate is written to the emptyDir shared pod mount, resulting in the signing CA no longer existing when the init container terminates. As a result, no private key or CA exists outside of the admission controllers deployment context.
 
-When used with the certificate init container, the sidecar-mutatingwebhook init must run second. By default is will expect the required certificate to be available in the emptyDir shared pod volume mount unless otherwise specified.  
+When used with the certificate init container, the mutatingwebhook init must run second. By default is will expect the required certificate to be available in the emptyDir shared pod volume mount unless otherwise specified.  
 
-Add the sidecar-mutatingwebhook-init-container to an existing deployment:  
+Add the mutatingwebhook-init-container to an existing deployment:  
 ```yaml
-				- name: sidecar-mutatingwebhook-init-container
-          image: twdps/sidecar-mutatingwebhook-init-container:0.1.0
+				- name: mutatingwebhook-init-container
+          image: twdps/mutatingwebhook-init-container:0.1.0
           imagePullPolicy: Always
           env:
             - name: NAMESPACE

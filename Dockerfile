@@ -1,4 +1,4 @@
 FROM busybox:glibc
 WORKDIR /
-COPY ./sidecar-mutatingwebhook-init-container ./sidecar-mutatingwebhook-init-container
-ENTRYPOINT ["./sidecar-mutatingwebhook-init-container"]
+COPY ./mutatingwebhook-init-container ./mutatingwebhook-init-container
+ENTRYPOINT ["./mutatingwebhook-init-container"]

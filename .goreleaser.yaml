@@ -1,4 +1,4 @@
-project_name: sidecar-mutatingwebhook-init-container
+project_name: mutatingwebhook-init-container
 
 builds:
   - env: [CGO_ENABLED=0]

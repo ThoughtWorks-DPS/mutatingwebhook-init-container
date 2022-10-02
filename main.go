@@ -30,7 +30,7 @@ var (
 
 func main() {
 	flag.StringVar(&webhookName, "webhook-name", "", "Webhook name for MutatingWebhookConfiguration, required")
-	flag.StringVar(&objectMetaName, "object-meta-name", "sidecarinjector.twdps.io", "ObjectMeta name for MutatingWebhookConfiguration, default is sidecarinjector.twdps.io")
+	flag.StringVar(&objectMetaName, "object-meta-name", "", "ObjectMeta name for MutatingWebhookConfiguration, required")
 	flag.StringVar(&serviceName, "service-name", "", "ClientConfig service name, required")
 	flag.StringVar(&serviceNamespace, "service-namespace", "", "ClientConfig service namespace, required")
 	flag.StringVar(&servicePath, "service-path", "", "ClientConfig service path, required")
@@ -42,7 +42,7 @@ func main() {
 	flag.Parse()
 
 	zerolog.SetGlobalLevel(zerolog.InfoLevel)
-	log = zerolog.New(os.Stdout).With().Str("correlationID", xid.New().String()).Str("container", "sidecar-mutatingwebhook-init-container").Str("service", objectMetaName).Timestamp().Logger()
+	log = zerolog.New(os.Stdout).With().Str("correlationID", xid.New().String()).Str("container", "mutatingwebhook-init-container").Str("service", objectMetaName).Timestamp().Logger()
 	
 	log.Info().Msg("Requested MutatingWebhookConfiguration")
 	log.Info().Str("--webhook-name=", webhookName).Send()

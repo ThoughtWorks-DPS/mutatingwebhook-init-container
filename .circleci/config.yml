@@ -84,7 +84,7 @@ commands:
           command: bash scripts/deploy_test_app.sh && sleep 25 # app needs a bit of time to let the init container run and then startup the test app
       - run:
           name: test for successful certificate creation
-          command: bats test/sidecar-mutatingwebhook-init-container.bats
+          command: bats test/mutatingwebhook-init-container.bats
 
 jobs:
 
@@ -152,9 +152,9 @@ jobs:
             curl -sL https://git.io/goreleaser | bash
       - run: 
           name: validate signature
-          command: cosign verify -key cosign.pub twdps/sidecar-mutatingwebhook-init-container
+          command: cosign verify -key cosign.pub twdps/mutatingwebhook-init-container
       - do/prune-dockerhub:
-          repository: twdps/sidecar-mutatingwebhook-init-container
+          repository: twdps/mutatingwebhook-init-container
           tag-filter: dev
 
   smoke-test-containers:

@@ -10,8 +10,8 @@
   [[ "${output}" =~ "CERTIFICATE" ]]
 }
 
-@test "review sidecar-mutatingwebhook-init-container logs for Success message" {
-  run bash -c 'kubectl logs $(kubectl get pod -l app=tls-test-app -n ci-dev -o jsonpath="{.items[0].metadata.name}") -n ci-dev -c sidecar-mutatingwebhook-init-container'
+@test "review mutatingwebhook-init-container logs for Success message" {
+  run bash -c 'kubectl logs $(kubectl get pod -l app=tls-test-app -n ci-dev -o jsonpath="{.items[0].metadata.name}") -n ci-dev -c mutatingwebhook-init-container'
   [[ "${output}" =~ "Success:" ]]
 }
 
